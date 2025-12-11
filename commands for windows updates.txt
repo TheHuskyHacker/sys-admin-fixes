@@ -1,0 +1,26 @@
+gpupdate /force
+Install-Module 
+PSWindowsUpdate
+Get-WindowsUpdate
+
+or 
+
+powershell.exe -command "(New-Object -ComObject Microsoft.Update.AutoUpdate).DetectNow()"
+wniget upgrade --all
+
+cmd:
+del C:\Windows\temp\*.*/s/q
+del C:\Windows\prefetch\*.*/s/q
+net stop bits
+net stop wuauserv
+del C:\Windows\SoftwareDistribution\*.*/s/q
+net start bits
+net start wuauserv
+ipconfig/flushdns
+ipconfig /release && ipconfig renew
+UsoClient StartScan
+UsoClient StartDownload
+UsoClient StartInstall
+UsoClient RestartDevice 
+wuauclt.exe /updatenow
+winget upgrade --all
