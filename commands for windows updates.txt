@@ -11,6 +11,8 @@ wniget upgrade --all
 cmd:
 del C:\Windows\temp\*.*/s/q
 del C:\Windows\prefetch\*.*/s/q
+del C:\Windows\temp\*.*/s/q
+del C:\Windows\prefetch\*.*/s/q
 net stop bits
 net stop wuauserv
 del C:\Windows\SoftwareDistribution\*.*/s/q
