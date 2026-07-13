@@ -12,6 +12,14 @@ if %errorLevel% neq 0 (
     exit /b
 )
 
+:: Prompt for the target username
+echo ==========================================================================
+set /p TARGET_USER="Enter the Windows username of the affected account (or press Enter for current user): "
+if "%TARGET_USER%"=="" set TARGET_USER=%username%
+echo [INFO] Targeting profile path: C:\Users\%TARGET_USER%
+echo ==========================================================================
+echo.
+
 echo [1/6] Stopping background Windows services...
 net stop bits /y
 net stop wuauserv /y
@@ -28,31 +36,31 @@ del /s /q /f C:\Windows\SoftwareDistribution\*.* >nul 2>&1
 
 echo [4/6] Purging Teams, Identity, and Token caches...
 :: Classic Teams Cache
-if exist "%appdata%\Microsoft\Teams" (
-    del /s /q /f "%appdata%\Microsoft\Teams\*.*" >nul 2>&1
-    rmdir /s /q "%appdata%\Microsoft\Teams" >nul 2>&1
+if exist "C:\Users\%TARGET_USER%\AppData\Roaming\Microsoft\Teams" (
+    del /s /q /f "C:\Users\%TARGET_USER%\AppData\Roaming\Microsoft\Teams\*.*" >nul 2>&1
+    rmdir /s /q "C:\Users\%TARGET_USER%\AppData\Roaming\Microsoft\Teams" >nul 2>&1
 )
 :: New Teams LocalCache
-if exist "%userprofile%\appdata\local\Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams" (
-    del /s /q /f "%userprofile%\appdata\local\Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams\*.*" >nul 2>&1
+if exist "C:\Users\%TARGET_USER%\AppData\Local\Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams" (
+    del /s /q /f "C:\Users\%TARGET_USER%\AppData\Local\Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams\*.*" >nul 2>&1
 )
 :: Identity & Token Broker Caches (Fixes login/splash loops)
-if exist "%localappdata%\Microsoft\IdentityCache" del /s /q /f "%localappdata%\Microsoft\IdentityCache\*.*" >nul 2>&1
-if exist "%localappdata%\Microsoft\TokenBroker" del /s /q /f "%localappdata%\Microsoft\TokenBroker\*.*" >nul 2>&1
+if exist "C:\Users\%TARGET_USER%\AppData\Local\Microsoft\IdentityCache" del /s /q /f "C:\Users\%TARGET_USER%\AppData\Local\Microsoft\IdentityCache\*.*" >nul 2>&1
+if exist "C:\Users\%TARGET_USER%\AppData\Local\Microsoft\TokenBroker" del /s /q /f "C:\Users\%TARGET_USER%\AppData\Local\Microsoft\TokenBroker\*.*" >nul 2>&1
 
 echo [5/6] Programmatically resetting the Teams App package...
-:: This replaces the manual step of going to Settings -> Apps -> Reset
-powershell -Command "Get-AppxPackage *MSTeams* | Reset-AppxPackage" >nul 2>&1
+:: Triggers the AppxPackage reset for the specified target user context
+powershell -Command "Get-AppxPackage -AllUsers *MSTeams* | Where-Object {$_.PackageUserInformation.UserSecurityId -ne $null} | Reset-AppxPackage" >nul 2>&1
 
 echo [6/6] Restarting Windows services...
 net start bits /y
 net start wuauserv /y
 
 echo ==========================================================================
-echo [SUCCESS] Script actions completed. 
+echo [SUCCESS] Script actions completed for user: %TARGET_USER%
 echo [NOTE] If login errors persist, manually clear "msteams" keys from Credential Manager.
 echo ==========================================================================
 
 set /p choice="The machine needs to restart to apply all changes. Reboot now? (Y/N): "
-if /i "%choice%"=="Y" shutdown -f -r -t 00
+if /i "%choice%"=="Y" shutdown /f /r /t 00
 exit /b
