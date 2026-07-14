@@ -45,10 +45,9 @@ The script executes the printer migration pipeline sequentially:
 
 ## Installation and Deployment
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com
-cd automated-printer-deployment
+### 1. Setup
+```
+Copy script and run this in powershell, save script as Deploy-LocalPrinter.ps1. Must be in directory of the script in powershell. Then move to set two. 
 ```
 
 ### 2. Execution Run Command
