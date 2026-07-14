@@ -48,7 +48,7 @@ The script executes the printer migration pipeline sequentially:
 ### 1. Setup
 ```
 Copy script and run this in powershell, save script as Deploy-LocalPrinter.ps1.
-Must be in directory of the script in powershell. Then move to set two. 
+Must be in directory of the script in powershell. Then move to step two. 
 ```
 
 ### 2. Execution Run Command
