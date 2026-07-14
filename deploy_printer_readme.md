@@ -77,34 +77,34 @@ function Write-Log (Message, Color = "White") {
 
 Write-Log "=== Starting Native Generic Printer Deployment Script ===" "Magenta"
 
-# 2. Input Environment Gathering & Validation
-\$PrinterModel = Read-Host -Prompt "Enter the Printer Make or Model (e.g., Trux Pro 400)"
-Write-Log "Target Printer Queue Name set to: \$PrinterModel"
+# 2. Input Environment Gathering & Validation (Dynamic Default IP)
+$PrinterModel = "YOUR_PRINTER_NAME"
 
-while (\$true) {
-    PrinterIP = Read-Host -Prompt "Enter the PrinterModel IP address"
-    
-    if (\(PrinterIP -match '^((25[0-5]\vert{}2[0-4][0-9]\vert{}[0-1]?[0-9][0-9]?)\.){3}(25[0-5]\vert{}2[0-4][0-9]\vert{}[0-1]?[0-9][0-9]?)\)') {
-        Write-Log "Valid IP format detected for \$PrinterIP." "Green"
-        Write-Log "Pinging \$PrinterIP to verify network connection..." "Cyan"
-        
-        if (Test-Connection -ComputerName \$PrinterIP -Count 3 -Quiet) {
-            Write-Log "Printer at \$PrinterIP is online and responding to pings." "Green"
-            break
-        } else {
-            Write-Log "WARNING: Printer at \$PrinterIP did not respond to pings." "Red"
-            \$Choice = Read-Host -Prompt "The printer appears offline. Continue anyway? (Y/N)"
-            if (Choice -eq 'Y' -or Choice -eq 'y') {
-                Write-Log "User bypassed ping failure. Proceeding with offline IP." "Yellow"
-                break
-            }
-        }
-    } else {
-        Write-Log "Invalid IP address format. Please try again (e.g., 192.168.1.50)." "Red"
+# Prompt for and validate the default IP
+while ($true) {
+    $DefaultIP = Read-Host -Prompt "Enter the default static IP to use for this deployment"
+    if ($DefaultIP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
+        Write-Log "Default IP set to: $DefaultIP" "Green"
+        break
     }
+    Write-Log "Invalid IP format. Try again (e.g., 192.168.1.50)." "Red"
 }
 
-\(PortName = "IP_\)PrinterIP"
+# User confirmation
+if ((Read-Host -Prompt "Proceed with IP '$DefaultIP'? (Y/N)") -match '^[Yy\s]*$') {
+    $PrinterIP = $DefaultIP
+} else {
+    # Alternative input
+    do { $PrinterIP = Read-Host -Prompt "Enter custom Printer IP" }
+    while ($PrinterIP -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+}
+
+# Network check
+if (-not (Test-Connection -ComputerName $PrinterIP -Count 1 -Quiet)) {
+    Write-Log "Warning: $PrinterIP did not respond." "Red"
+}
+$PortName = "IP_$PrinterIP"
+
 
 # 3. Direct Native Driver Core Definition
 # Bypasses installation steps by referencing the pre-baked Windows PCL 4 text catalog
@@ -152,18 +152,15 @@ try {
     Write-Log "CRITICAL: Failed to create printer port: $_" "Red"
 }
 
-# 7. Reconnect or Add the Printer Object Locally using Generic Catalog
-Write-Log "`n[4/5] Finalizing Local Printer Mapping..." "Cyan"
+# 7. Reconnect or Add the Printer Object Locally (with Sharing Enabled)
 try {
-    if (Get-Printer -Name \$PrinterModel -ErrorAction SilentlyContinue) {
-        Set-Printer -Name \$PrinterModel -PortName PortName -DriverName DriverName -ErrorAction Stop
-        Write-Log "Existing local '\$PrinterModel' queue updated with new IP and driver patch." "Green"
+    if (Get-Printer -Name $PrinterModel -ErrorAction SilentlyContinue) {
+        Set-Printer -Name $PrinterModel -PortName $PortName -DriverName $DriverName -Shared $true -ShareName $PrinterModel -ErrorAction Stop
     } else {
-        Add-Printer -Name \$PrinterModel -DriverName DriverName -PortName PortName -ErrorAction Stop
-        Write-Log "New local '\$PrinterModel' queue added successfully." "Green"
+        Add-Printer -Name $PrinterModel -DriverName $DriverName -PortName $PortName -Shared $true -ShareName $PrinterModel -ErrorAction Stop
     }
 } catch {
-    Write-Log "CRITICAL: Failed to map or update the local printer object: \$_" "Red"
+    Write-Log "Error setting up printer sharing: $_" "Red"
 }
 
 # 8. Send Automated Test Page
